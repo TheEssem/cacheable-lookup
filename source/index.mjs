@@ -248,10 +248,15 @@ export default class CacheableLookup {
 
 	async _resolve(hostname) {
 		// ANY is unsafe as it doesn't trigger new queries in the underlying server.
-		const [A, AAAA] = await Promise.all([
+		const [resultA, resultAAAA] = await Promise.allSettled([
 			ignoreNoResultErrors(this._resolve4(hostname, ttl)),
 			ignoreNoResultErrors(this._resolve6(hostname, ttl))
 		]);
+
+		if (resultA.status === "rejected" && resultAAAA.status === "rejected") throw new AggregateError([resultA.reason, resultAAAA.reason]);
+
+		const A = resultA.value ?? [];
+		const AAAA = resultAAAA.value ?? [];
 
 		let aTtl = 0;
 		let aaaaTtl = 0;
